@@ -1,0 +1,19 @@
+.DS_Store
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# 本地历史、实验与素材制作过程，不进入当前提醒工具仓库。
+artifacts/
+experiments/
+vibe_images/
+
+# npm start / npm run package:mac 自动构建的播放器。
+src/renderer/generated/
+
+# 仅保留实际运行使用的透明视频和降级静帧。
+src/renderer/assets/*
+!src/renderer/assets/gugugaga-*-alpha.webm
+!src/renderer/assets/gugugaga-*-rest.png
