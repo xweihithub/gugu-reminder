@@ -1,6 +1,9 @@
 .DS_Store
 node_modules/
 dist/
+.build/
+.swiftpm/
+*.dSYM/
 .env
 .env.*
 !.env.example
@@ -10,10 +13,5 @@ artifacts/
 experiments/
 vibe_images/
 
-# npm start / npm run package:mac 自动构建的播放器。
-src/renderer/generated/
-
-# 仅保留实际运行使用的透明视频和降级静帧。
-src/renderer/assets/*
-!src/renderer/assets/gugugaga-*-alpha.webm
-!src/renderer/assets/gugugaga-*-rest.png
+# 旧 Electron 工作目录仅作本地历史，当前代码使用 native/。
+src/
