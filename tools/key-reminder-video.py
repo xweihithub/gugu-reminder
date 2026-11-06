@@ -10,10 +10,13 @@ parser.add_argument('source',type=Path)
 parser.add_argument('output',type=Path)
 parser.add_argument('--size',type=int,default=1080)
 parser.add_argument('--title',default='咕咕嘎嘎桌面提醒 · 透明背景')
+parser.add_argument('--padding',type=int,default=0,help='透明安全边距（每侧像素），等比缩小已抠像的完整画面')
 args=parser.parse_args()
+if args.padding<0 or args.padding*2>=args.size:
+ parser.error('--padding 需不小于 0 且小于画布边长的一半')
 ffmpeg='/opt/homebrew/bin/ffmpeg'
 args.output.parent.mkdir(parents=True,exist_ok=True)
-# Both supplied films contain 24 unique frames/sec in a variable-rate container.
+# 统一输出 24 fps，避免原片可变帧率或重复帧影响提醒播放。
 decoder=subprocess.Popen([ffmpeg,'-v','error','-i',str(args.source),'-vf',f'fps=24,scale={args.size}:{args.size}:flags=lanczos','-f','rawvideo','-pix_fmt','rgb24','-'],stdout=subprocess.PIPE)
 encoder=subprocess.Popen([ffmpeg,'-v','error','-y','-f','rawvideo','-pix_fmt','rgba','-s',f'{args.size}x{args.size}','-r','24','-i','-','-an','-c:v','libvpx-vp9','-pix_fmt','yuva420p','-auto-alt-ref','0','-b:v','0','-crf','20','-deadline','good','-cpu-used','3','-row-mt','1','-metadata',f'title={args.title}',str(args.output)],stdin=subprocess.PIPE)
 size=args.size; frame_bytes=size*size*3; count=0; first=None; last=None; stats=[]
@@ -38,6 +41,11 @@ while True:
  edge=np.minimum(1,np.arange(size-1,-1,-1,dtype=np.float32)/(size*.065))
  edge=edge*edge*(3-2*edge);a*=edge[:,None]
  rgba=np.dstack([np.clip(rgb,0,255).astype(np.uint8),np.round(a*255).astype(np.uint8)])
+ if args.padding:
+  inner=args.size-args.padding*2
+  content=cv2.resize(rgba,(inner,inner),interpolation=cv2.INTER_AREA)
+  rgba=np.zeros((size,size,4),dtype=np.uint8)
+  rgba[args.padding:size-args.padding,args.padding:size-args.padding]=content
  encoder.stdin.write(rgba.tobytes());count+=1
  if first is None:first=rgba.copy()
  last=rgba.copy()
@@ -47,6 +55,6 @@ encoder.stdin.close();decoder.stdout.close()
 if decoder.wait() or encoder.wait():raise RuntimeError('FFmpeg 转码失败')
 for name,rgba in [('poster',first),('hold',last)]:
  cv2.imwrite(str(args.output.with_name(args.output.stem+'-'+name+'.png')),cv2.cvtColor(rgba,cv2.COLOR_RGBA2BGRA))
-report={'source':str(args.source),'output':str(args.output),'frames':count,'fps':24,'size':size,'audio':'muted','alphaCheck':{'allCornersTransparent':all(max(x['cornerAlpha'])==0 for x in stats),'minOpaquePixels':min(x['opaque'] for x in stats)},'framesCheck':stats}
+report={'source':str(args.source),'output':str(args.output),'frames':count,'fps':24,'size':size,'padding':args.padding,'audio':'muted','alphaCheck':{'allCornersTransparent':all(max(x['cornerAlpha'])==0 for x in stats),'minOpaquePixels':min(x['opaque'] for x in stats)},'framesCheck':stats}
 args.output.with_suffix('.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
 print(json.dumps({k:v for k,v in report.items() if k!='framesCheck'},ensure_ascii=False),flush=True)
