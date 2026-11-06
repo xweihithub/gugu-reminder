@@ -35,7 +35,7 @@ npm start
 npm run package:win
 ```
 
-双击 `dist/Gugu-Reminder-0.1.4-Setup.exe` 安装，可选择安装位置，并创建桌面和开始菜单中的“咕咕提醒”快捷方式。也可运行 `npm run package:win:dir` 生成免安装目录，然后打开 `dist/win-unpacked/Golden Paw.exe`（需保留整个目录）。
+双击 `dist/Gugu-Reminder-0.1.5-Setup.exe` 安装，可选择安装位置，并创建桌面和开始菜单中的“咕咕提醒”快捷方式。也可运行 `npm run package:win:dir` 生成免安装目录，然后打开 `dist/win-unpacked/Golden Paw.exe`（需保留整个目录）。
 
 应用启动后在任务栏右下角托盘运行，可能收在“显示隐藏的图标”中。左键点击企鹅图标打开提醒设置，右键可暂停、恢复或退出。关闭设置面板后继续计时；再次打开桌面快捷方式会显示已有进程的设置，不会重复启动。
 
