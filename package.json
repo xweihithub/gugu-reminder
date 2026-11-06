@@ -1,16 +1,18 @@
 {
   "name": "golden-paw",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
-  "description": "macOS 咕咕嘎嘎定时动画提醒",
+  "description": "Windows / macOS 咕咕嘎嘎定时动画提醒",
   "main": "src/desktop/main.cjs",
   "scripts": {
     "start": "npm run build:cinema && electron .",
     "test": "node --test tests/*.test.mjs",
     "check": "node --check src/desktop/main.cjs && node --check src/desktop/preload.cjs && node --check src/renderer/app.js && node --check src/renderer/reminder-cinema.mjs && node --check src/core/reminders.cjs",
     "package:mac": "npm run build:cinema && electron-builder --mac dir",
-    "build:cinema": "esbuild src/renderer/reminder-cinema.mjs --bundle --minify --format=iife --outfile=src/renderer/generated/reminder-cinema.js"
+    "build:cinema": "esbuild src/renderer/reminder-cinema.mjs --bundle --minify --format=iife --outfile=src/renderer/generated/reminder-cinema.js",
+    "package:win": "npm run build:cinema && electron-builder --win nsis --x64",
+    "package:win:dir": "npm run build:cinema && electron-builder --win dir --x64"
   },
   "devDependencies": {
     "electron": "^44.7.0",
@@ -30,6 +32,20 @@
     },
     "directories": {
       "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "src/desktop/icons/gugu.ico",
+      "artifactName": "Gugu-Reminder-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "咕咕提醒",
+      "runAfterFinish": true
     }
   }
 }

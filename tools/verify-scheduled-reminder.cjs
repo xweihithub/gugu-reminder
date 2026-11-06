@@ -11,14 +11,14 @@ seed.reminders.next[kind]=deadline;
 fs.writeFileSync(path.join(root,'state.json'),JSON.stringify(seed));app.setPath('userData',root);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.on('browser-window-created',(_e,win)=>{
- let showed=0;win.on('show',()=>{showed++;win.hide();});
+ let showed=0;win.on('show',()=>{showed++;});
  win.webContents.once('did-finish-load',async()=>{
   try{
    await delay(100);
    const startup=await win.webContents.executeJavaScript(`({noticeHidden:document.querySelector('#notice').hidden,settingsHidden:document.querySelector('#panel').hidden,oldCharacter:!!document.querySelector('#pet,#home'),api:Object.keys(window.paw)})`);
    assert.ok(startup.noticeHidden&&startup.settingsHidden&&!startup.oldCharacter);
    assert.equal(showed,0);assert.equal(globalShortcut.isRegistered('CommandOrControl+Alt+P'),false);
-   assert.deepEqual(startup.api.sort(),['load','regions','finishReminder','saveReminderIntervals','onEvent'].sort());
+   assert.deepEqual(startup.api.sort(),['load','regions','finishReminder','saveReminderIntervals','onEvent','setReminderPaused','quit'].sort());
    const menu=Menu.getApplicationMenu(),labels=menu.items[0].submenu.items.filter(item=>item.type!=='separator').map(item=>item.label);
    assert.deepEqual(labels,['提醒设置','暂停提醒 1 小时','恢复提醒','退出']);
    menu.getMenuItemById('reminder-settings').click();await delay(100);
@@ -50,7 +50,9 @@ app.on('browser-window-created',(_e,win)=>{
    assert.equal(resumed.reminders.pausedUntil,0);assert.ok(resumed.reminders.next[kind]>Date.now());
    const report={startup,labels,kind,scheduledPlayback:playback,pauseAndResume:true,legacyDataPreserved:true};
    fs.writeFileSync(path.join(out,'scheduled-'+kind+'-qa.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
-   fs.rmSync(root,{recursive:true,force:true});app.exit(0);
+   // Windows 的 Chromium 会话文件在进程退出前可能保持锁定。
+   try{fs.rmSync(root,{recursive:true,force:true});}catch(error){if(process.platform!=='win32'||!['EPERM','EBUSY','ENOTEMPTY'].includes(error.code))throw error;}
+   app.exit(0);
   }catch(error){console.error(error);app.exit(1);}
  });
 });

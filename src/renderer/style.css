@@ -1,48 +1,8 @@
-:root{--ink:#49372a;--muted:#97836d;--paper:#fffaf0;--green:#526748;--line:#e8dcc7}
-*{box-sizing:border-box}
-body{margin:0;width:100vw;height:100vh;overflow:hidden;background:transparent;color:var(--ink);font-family:"Avenir Next","PingFang SC",sans-serif;user-select:none}
-button,input{font:inherit}
-button{cursor:pointer;border:0;color:inherit;background:none}
-button:focus-visible{outline:2px solid #688453;outline-offset:4px}
-button:disabled{opacity:.5;cursor:wait}
-[hidden]{display:none!important}
-#panel{position:absolute;right:35px;top:45px;width:min(390px,calc(100vw - 32px));max-height:calc(100vh - 90px);overflow:auto;border:1px solid var(--line);border-radius:24px;background:var(--paper);box-shadow:0 18px 70px #241c2430;user-select:text}
-header{display:flex;justify-content:space-between;padding:24px 24px 12px}
-header small{font-size:9px;letter-spacing:2.5px;color:#9d8563}
-h1{font-family:"Songti SC",Georgia,serif;font-weight:600;font-size:23px;margin:8px 0 0}
-#close{align-self:flex-start;font-size:25px;color:#9c8a73}
-.intro{padding:0 24px 14px;font-size:11px;color:var(--muted);line-height:1.7}
-/* 已抠像的视频直接与透明桌面窗口合成。 */
-#notice{position:fixed;inset:0;z-index:20;pointer-events:none}
-#cinema{position:absolute;left:50%;bottom:clamp(180px,24vh,240px);width:min(580px,68vh,92vw);aspect-ratio:1;transform:translateX(-50%);pointer-events:none;background:transparent}
-#cinema video,#cinema img{display:block;width:100%;height:100%;object-fit:contain;background:transparent}
-#cinema video[hidden],#cinema img[hidden]{display:none}
-.notice-character{position:absolute;padding:0;background:none;border:0;pointer-events:auto;cursor:pointer}
-.notice-card{position:absolute;bottom:clamp(22px,5vh,64px);width:min(480px,calc(100vw - 32px));padding:0;text-align:center;pointer-events:auto;opacity:0;transform:translateY(12px);transition:opacity .35s,transform .45s}
-#notice[data-phase=performing] .notice-card{opacity:1;transform:translateY(0)}
-#notice[data-phase=entering] .notice-card,#notice[data-phase=leaving] .notice-card{pointer-events:none}
-.notice-eyebrow{font-size:10px;font-weight:600;letter-spacing:4px;color:#ffe5b3;text-shadow:0 1px 4px #342019,0 0 10px #7c4d26}
-.notice-card h2{font-family:"Songti SC",Georgia,serif;font-size:clamp(30px,4vw,46px);line-height:1.3;font-weight:800;letter-spacing:3px;margin:0 0 12px;color:#fff4d5;-webkit-text-stroke:.5px #93663c;paint-order:stroke fill;text-shadow:0 2px 4px #4b2e1d99,0 0 22px #ffc46a55}
-#noticeMessage{font-size:12px;line-height:1.7;color:#fff8e7;margin:0 0 13px;text-shadow:0 1px 4px #241b13,0 0 6px #241b13}
-.notice-actions{display:flex;justify-content:center;gap:10px}
-.notice-actions button{font-size:11px;padding:8px 17px;border-radius:30px;background:#fff7e6ed;color:#6c4d31;border:1px solid #f1d8aa;box-shadow:0 3px 16px #36241419;transition:transform .2s}
-.notice-actions button:hover{transform:translateY(-2px)}
-.notice-primary{background:#9ae1dcf0!important;color:#164a48!important;border-color:#b7fff3!important}
-.notice-primary:disabled{opacity:.65;cursor:default}
-.notice-hint{font-size:9px;letter-spacing:1px;color:#fff4dd;margin:9px 0 0;text-shadow:0 1px 4px #241b13}
-.notice-close{position:absolute;right:0;top:0;width:27px;height:27px;border-radius:50%;font-size:19px;color:#fff7e7;background:#45362599}
-.rest-progress{display:flex;justify-content:center;align-items:center;gap:12px;margin:2px auto 12px;width:190px;font-size:10px;color:#fff5dc;text-shadow:0 1px 4px #362414;font-variant-numeric:tabular-nums}
-.rest-track{height:3px;background:#4e514c66;border-radius:4px;flex:1;overflow:hidden}
-#restFill{display:block;width:0;height:100%;background:#b8f3e9;border-radius:4px;transition:width .1s linear}
-.reminder-settings{padding:12px 24px 16px;border-bottom:1px solid var(--line)}
-.interval-heading,.interval-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.interval-heading h2{margin:0;font-size:12px;font-weight:600;color:var(--ink)}
-.interval-heading span,.interval-footer span{font-size:9px;line-height:1.5;color:var(--muted)}
-.interval-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
-.interval-grid label{margin:0;font-size:10px;color:var(--ink)}
-.interval-grid input{display:block;min-width:0;width:100%;margin-top:7px;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fffdf7;color:var(--ink);font-size:13px;user-select:text}
-.interval-grid input:focus{outline:2px solid #688453;outline-offset:2px}
-.interval-footer button{background:var(--green);color:white;border-radius:8px;padding:7px 14px;font-size:11px}
-
-@media(max-width:420px){#panel{right:16px}.notice-card h2{font-size:30px}}
-@media(prefers-reduced-motion:reduce){.notice-card{transition:none}}
+@font-face{font-family:Gugu;src:url('fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+:root{--ink:#593c4c;--muted:#8c6375;--paper:#fff8fb;--green:#a74570;--line:#f0dce6}
+*{box-sizing:border-box}body{margin:0;width:100vw;height:100vh;overflow:hidden;background:transparent;color:var(--ink);font:14px/1.55 "Segoe UI","Microsoft YaHei",sans-serif;user-select:none}button,input{font:inherit}button{cursor:pointer;color:inherit}button:focus-visible,input:focus-visible{outline:2px solid #bd638b;outline-offset:3px}button:disabled{opacity:.55;cursor:default}[hidden]{display:none!important}
+#panel{position:absolute;right:32px;top:40px;width:min(430px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow:auto;border:1px solid var(--line);border-radius:16px;background:var(--paper);box-shadow:0 22px 60px #76334d24;user-select:text}.window-bar{height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 18px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}#close{border:0;background:transparent;font-size:23px;color:var(--muted);padding:2px 8px}header{padding:25px 27px 0}header small{font-size:12px;color:#a34d76}h1{font:400 25px/1.4 Gugu,sans-serif;letter-spacing:1px;margin:17px 0 7px}.intro{margin:0;padding:0 27px;color:var(--muted)}
+.reminder-settings{padding:22px 27px 25px}.interval-heading{display:none}.interval-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 20px}.interval-grid label{display:flex;flex-direction:column;align-items:flex-start;min-width:0;background:#fcebf2;border-radius:12px;padding:16px 13px;font:16px Gugu,sans-serif;gap:13px}.setting-icon{height:24px;color:#b25982}.setting-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.interval-grid input{width:100%;min-width:0;color:var(--ink);font:25px/1.3 "Segoe UI",sans-serif;font-variant-numeric:tabular-nums;background:transparent;border:0;padding:0;user-select:text}.interval-grid small{font:12px "Segoe UI","Microsoft YaHei",sans-serif;color:var(--muted)}.interval-footer{display:flex;flex-direction:column;gap:17px;align-items:stretch}.interval-footer span{font-size:12px;color:var(--muted);min-height:19px}.interval-footer button{border:0;border-radius:10px;padding:11px;background:var(--green);color:white;font:16px Gugu,sans-serif}.settings-actions{padding:16px 27px;display:flex;gap:10px;border-top:1px solid var(--line)}.settings-actions button{border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:#fff1f7;font:15px Gugu,sans-serif}
+#notice{position:fixed;inset:0;z-index:20;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 0}#cinema{position:relative;width:min(900px,calc(100vw - 48px),calc(100vh - 160px));height:auto;aspect-ratio:1;flex:0 0 auto;min-height:0;pointer-events:none;background:transparent}#cinema video,#cinema img{display:block;width:100%;height:100%;object-fit:contain;background:transparent}.notice-character{position:absolute;padding:0;background:none;border:0;pointer-events:auto}
+.notice-card{position:relative;max-width:calc(100vw - 32px);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 12px;padding:9px 15px;background:#fffaf0;color:#5d4a35;border-radius:18px;box-shadow:0 3px 0 #b9a78038;pointer-events:auto;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s}.notice-card:before{content:"";position:absolute;top:-5px;left:calc(50% - 6px);width:12px;height:12px;background:#fffaf0;transform:rotate(45deg);border-radius:3px}#notice:not([hidden]) .notice-card[hidden]{display:flex!important;visibility:hidden}#notice[data-phase=performing] .notice-card{opacity:1;transform:translateY(0)}#notice[data-phase=entering] .notice-card,#notice[data-phase=leaving] .notice-card{pointer-events:none}.notice-card h2{position:relative;font:400 19px/1.5 Gugu,sans-serif;letter-spacing:.5px;margin:0}.notice-actions{display:flex;align-items:center;gap:8px}.notice-actions button{font:14px/1.5 Gugu,sans-serif;border:0;border-radius:20px;padding:4px 9px;color:#8a795c;background:transparent}.notice-actions .notice-primary{background:#e1ebd3;color:#547044}.notice-close{position:absolute;right:-8px;top:-10px;width:23px;height:23px;border:0;border-radius:50%;background:#fffaf0;color:#a59880;font-size:16px;line-height:1;opacity:.85}.rest-progress{display:flex;align-items:center;gap:6px;color:#8a795c;font:13px Gugu,sans-serif}.rest-track{width:35px;height:3px;background:#e5ddca;border-radius:4px;overflow:hidden}#restFill{display:block;height:100%;width:0;background:#93b07a;transition:width .1s linear}.rest-progress b{font-weight:400;font-variant-numeric:tabular-nums}
+@media(max-width:480px){#panel{right:16px;top:20px}header{padding:22px 20px 0}.intro{padding:0 20px}.reminder-settings{padding:20px}.settings-actions{padding:16px 20px}.notice-card h2{font-size:17px}.notice-card{gap:5px 8px}}@media(prefers-reduced-motion:reduce){.notice-card{transition:none}}

@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import vm f
 
 function harness({reducedMotion=false,reminderIntervals,legacyData={}}={}){
  let time=0,timers=[],frames=[],events={},regionCalls=[],calls={finish:[],resident:[],cinema:[],intervals:[]};
- const ids=['panel','close','notice','cinema','noticeCard','noticeTitle','noticeMessage','noticeEyebrow','noticeDone','noticeLater','noticeClose','noticeCharacter','restRing','restCount','restFill','reminderSettings','waterInterval','walkInterval','eyesInterval','saveIntervals','intervalStatus'];
+ const ids=['panel','close','notice','cinema','noticeCard','noticeTitle','noticeMessage','noticeEyebrow','noticeDone','noticeLater','noticeClose','noticeCharacter','restRing','restCount','restFill','reminderSettings','waterInterval','walkInterval','eyesInterval','saveIntervals','intervalStatus','pauseReminders','quitApp','reminderStatus'];
  const elements=Object.fromEntries(ids.map(id=>{
   const classes=new Set(),style={setProperty(key,value){style[key]=value;}};
   return[id,{id,hidden:['panel','notice','noticeCard','noticeCharacter','restRing'].includes(id),style,dataset:{},value:'',checked:false,disabled:false,className:'',textContent:'',
@@ -16,9 +16,10 @@ function harness({reducedMotion=false,reminderIntervals,legacyData={}}={}){
   regions:v=>regionCalls.push(v),
   onEvent:fn=>{const old=events.agent;events.agent=e=>{old?.(e);fn(e);};},
   saveReminderIntervals:async values=>{calls.intervals.push(values);return{intervals:values,changed:Object.keys(values)};},
+  setReminderPaused:async paused=>({pausedUntil:paused?Date.now()+3600000:0}),quit:()=>{calls.quit=true;},
   finishReminder:async(kind,snooze)=>{calls.finish.push([kind,snooze]);},
  };
- const context={console,innerWidth:1512,innerHeight:900,performance:{now:()=>time},window:{paw:api,matchMedia:()=>({matches:reducedMotion}),PawCinema:{create:()=>({
+ const context={console,Date,innerWidth:1512,innerHeight:900,performance:{now:()=>time},window:{paw:api,matchMedia:()=>({matches:reducedMotion}),PawCinema:{create:()=>({
    start:(kind,reduced)=>calls.cinema.push(['start',kind,reduced]),render:(t,phase,exit)=>calls.cinema.push(['render',t,phase,exit]),
    stop:()=>calls.cinema.push(['stop']),resize(){},hitRect:()=>({x:540,y:150,width:420,height:480}),
   })}},
@@ -162,4 +163,19 @@ test('更改设置取消该类旧排队提醒，不立即播放',async()=>{
  h.events.agent({kind:'reminder',reminder:'eyes'});assert.equal(h.read('pendingHealth'),'eyes');
  h.events.agent({kind:'reminder-settings',intervals:{water:60,walk:50,eyes:30},changed:['eyes']});
  h.elements.close.onclick();await h.step(2000);assert.equal(h.read('pendingHealth'),null);assert.equal(h.read('currentHealth'),null);
+});
+
+
+test('设置面板支持暂停恢复，并同步托盘状态事件',async()=>{
+ const h=harness();await h.ready();
+ await h.elements.pauseReminders.onclick();
+ assert.equal(h.elements.pauseReminders.dataset.paused,'true');
+ assert.equal(h.elements.pauseReminders.textContent,'恢复提醒');
+ await h.elements.pauseReminders.onclick();
+ assert.equal(h.elements.pauseReminders.dataset.paused,'false');
+ h.events.agent({kind:'reminder-state',pausedUntil:Date.now()+3600000});
+ assert.equal(h.elements.pauseReminders.dataset.paused,'true');
+ h.events.agent({kind:'reminder-state',pausedUntil:0});
+ assert.equal(h.elements.pauseReminders.dataset.paused,'false');
+ h.elements.quitApp.onclick();assert.equal(h.calls.quit,true);
 });

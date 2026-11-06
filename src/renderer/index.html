@@ -13,17 +13,19 @@
 </div>
 </div>
 <section id="panel" class="interactive" hidden aria-labelledby="settingsTitle">
-<header><div><small>GUGUGAGA</small><h1 id="settingsTitle">提醒设置</h1></div><button id="close" aria-label="关闭设置">×</button></header>
-<p class="intro">平时安静等待，到时间再出来提醒你。</p>
+<div class="window-bar"><span>咕咕提醒 / 设置</span><button id="close" aria-label="关闭设置">×</button></div>
+<header><div><small id="reminderStatus">● 提醒进行中</small><h1 id="settingsTitle">休息一下，元气回来！</h1></div></header>
+<p class="intro">小小提醒，陪你照顾好自己。</p>
 <form id="reminderSettings" class="reminder-settings" aria-labelledby="reminderSettingsTitle">
 <div class="interval-heading"><h2 id="reminderSettingsTitle">提醒间隔</h2><span>单位：分钟</span></div>
 <div class="interval-grid">
-<label for="waterInterval">💧 喝水<input id="waterInterval" type="number" min="1" max="1440" step="1" value="60" required aria-label="喝水提醒间隔（分钟）"></label>
-<label for="walkInterval">🐧 走动<input id="walkInterval" type="number" min="1" max="1440" step="1" value="50" required aria-label="走动提醒间隔（分钟）"></label>
-<label for="eyesInterval">👀 眼睛休息<input id="eyesInterval" type="number" min="1" max="1440" step="1" value="40" required aria-label="眼睛休息提醒间隔（分钟）"></label>
+<label for="waterInterval"><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/></svg></span>喝水<input id="waterInterval" type="number" min="1" max="1440" step="1" value="60" required aria-label="喝水提醒间隔（分钟）"><small>分钟 / 次</small></label>
+<label for="walkInterval"><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 20 3-6 4 2 2 5M6 12l4-5 4 4 4 1M10 7l2 7"/><circle cx="14" cy="4" r="2"/></svg></span>走动<input id="walkInterval" type="number" min="1" max="1440" step="1" value="50" required aria-label="走动提醒间隔（分钟）"><small>分钟 / 次</small></label>
+<label for="eyesInterval"><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>护眼<input id="eyesInterval" type="number" min="1" max="1440" step="1" value="40" required aria-label="眼睛休息提醒间隔（分钟）"><small>分钟 / 次</small></label>
 </div>
-<div class="interval-footer"><span id="intervalStatus" role="status" aria-live="polite">修改的项目从保存时重新计时</span><button id="saveIntervals" type="submit">保存</button></div>
+<div class="interval-footer"><span id="intervalStatus" role="status" aria-live="polite">修改的项目从保存时重新计时</span><button id="saveIntervals" type="submit">保存设置</button></div>
 </form>
+<footer class="settings-actions"><button id="pauseReminders" type="button">暂停 1 小时</button><button id="quitApp" type="button">退出</button></footer>
 </section>
 <script src="generated/reminder-cinema.js"></script><script src="app.js"></script>
 </body></html>

@@ -12,9 +12,9 @@ async function showSettings(){
 }
 $('close').onclick=()=>{panel.hidden=true;regions();};
 const healthCopy={
- water:{title:'喝口水吧',message:'我也喝一口，陪你一起。',done:'喝好了',later:'10 分钟后',label:'喝水提醒'},
- walk:{title:'起来走走呀',message:'放下手里的事，陪我走几步？',done:'这就起来',later:'10 分钟后',label:'走动提醒'},
- eyes:{title:'眼睛歇一会儿',message:'看看远处，慢慢眨眼。我陪你数 20 秒。',done:'陪你休息中…',later:'5 分钟后',label:'眼睛休息'},
+ water:{title:'咕噜咕噜，喝水啦～',message:'我也喝一口，陪你一起。',done:'喝好啦',later:'10 分钟后',label:'喝水提醒'},
+ walk:{title:'走走呀，舒展一下～',message:'放下手里的事，陪我走几步？',done:'这就起来',later:'10 分钟后',label:'走动提醒'},
+ eyes:{title:'眨眨眼，看向远处～',message:'看看远处，慢慢眨眼。我陪你数 20 秒。',done:'休息中…',later:'5 分钟后',label:'眼睛休息'},
 };
 function ensureCinema(){
  if(cinema)return cinema;
@@ -22,8 +22,7 @@ function ensureCinema(){
  catch(error){console.error('提醒视频初始化失败',error);return null;}
 }
 function positionNotice(){
- const card=$('noticeCard'),width=card.offsetWidth||440;
- card.style.left=Math.max(16,(innerWidth-width)/2)+'px';card.style.top='';
+ const card=$('noticeCard');card.style.left='';card.style.top='';
 }
 function drawCinema(time,phase='entering',exit=0){
  if(!cinema)return;
@@ -50,7 +49,7 @@ function healthReminder(kind){
  clearTimeout(noticeTimer);noticeTimer=null;
  const copy=healthCopy[kind];$('noticeCard').dataset.kind=kind;$('noticeCard').dataset.stage='entering';
  $('noticeEyebrow').textContent='咕咕嘎嘎 · '+copy.label;$('noticeTitle').textContent=copy.title;$('noticeMessage').textContent=copy.message;
- $('noticeDone').textContent=copy.done;$('noticeDone').disabled=kind==='eyes';$('noticeLater').textContent='稍后';$('noticeLater').title=copy.later+'提醒';$('noticeLater').setAttribute('aria-label',copy.later+'提醒');
+ $('noticeDone').textContent=copy.done;$('noticeDone').disabled=kind==='eyes';$('noticeLater').textContent='等一下';$('noticeLater').title=copy.later+'提醒';$('noticeLater').setAttribute('aria-label',copy.later+'提醒');
  $('restRing').hidden=kind!=='eyes';$('restCount').textContent='20';$('restFill').style.width='0%';
  $('noticeCharacter').setAttribute('aria-label',copy.label+'，点击角色回应');
  $('notice').hidden=false;$('noticeCharacter').hidden=false;$('noticeCard').hidden=true;$('notice').dataset.phase='entering';positionNotice();
@@ -115,7 +114,18 @@ $('reminderSettings').onsubmit=async e=>{
  finally{$('saveIntervals').disabled=false;regions();}
 };
 
+function applyReminderState(pausedUntil=0){
+ const paused=pausedUntil>Date.now();$('pauseReminders').textContent=paused?'恢复提醒':'暂停 1 小时';$('pauseReminders').dataset.paused=String(paused);$('reminderStatus').textContent=paused?'● 已暂停 · 1 小时后自动恢复':'● 提醒进行中';
+}
+$('pauseReminders').onclick=async()=>{
+ $('pauseReminders').disabled=true;
+ try{const state=await api.setReminderPaused($('pauseReminders').dataset.paused!=='true');applyReminderState(state.pausedUntil);}
+ catch(error){$('intervalStatus').textContent='操作失败，请重试';}
+ finally{$('pauseReminders').disabled=false;regions();}
+};
+$('quitApp').onclick=()=>api.quit();
 api.onEvent(e=>{
+ if(e.kind==='reminder-state')applyReminderState(e.pausedUntil);
  if(e.kind==='reminder-settings-open')showSettings();
  if(e.kind==='reminder-settings'){applyReminderIntervals(e.intervals);if(e.changed.includes(pendingHealth))pendingHealth=null;}
  if(e.kind==='reminder')healthReminder(e.reminder);
@@ -123,7 +133,7 @@ api.onEvent(e=>{
  if(e.kind==='layout'){if(currentHealth){cinema?.resize();positionNotice();}regions();}
 });
 setInterval(()=>{if(pendingHealth&&!currentHealth)healthReminder(pendingHealth);},1000);
-(async()=>{const data=await api.load();applyReminderIntervals(data.reminderIntervals);regions();})();
+(async()=>{const data=await api.load();applyReminderIntervals(data.reminderIntervals);applyReminderState(data.pausedUntil);regions();})();
 setInterval(regions,500);
 window.onresize=()=>{if(currentHealth){cinema?.resize();positionNotice();}regions();};
 document.addEventListener('keydown',e=>{
