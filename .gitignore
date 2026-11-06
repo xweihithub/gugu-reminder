@@ -17,3 +17,6 @@ src/renderer/generated/
 src/renderer/assets/*
 !src/renderer/assets/gugugaga-*-alpha.webm
 !src/renderer/assets/gugugaga-*-rest.png
+# Windows 原生版在构建时生成的压缩动画与本地输出。
+native/generated/
+native/vendor/

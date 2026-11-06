@@ -1,5 +1,7 @@
 # 咕咕提醒 · Gugu Reminder
 
+Windows 原生版已在 `feat/windows-native` 分支实现，使用系统原生 WPF 窗口与原始 1080 视频，无需 WebView2。构建、安装与验证见 [原生版说明](native/README.md)。下方仍保留 Electron 版本使用说明。
+
 Windows 系统托盘 / macOS 菜单栏提醒工具。平时不显示角色，到喝水、走动或眼睛休息的时间，播放对应的咕咕嘎嘎透明动画，提醒结束后收起。
 
 ## 当前功能

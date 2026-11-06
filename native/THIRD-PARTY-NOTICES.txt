@@ -1,0 +1,14 @@
+FFmpeg 9.0.2 essentials build (separate, unmodified executable)
+Copyright (c) 2000-2026 the FFmpeg developers and contributors.
+License: GNU GPL version 3; see FFmpeg-LICENSE.txt.
+Binary provider: https://www.gyan.dev/ffmpeg/builds/
+Exact FFmpeg source revision: https://github.com/FFmpeg/FFmpeg/commit/946fcce07b
+Source archive: https://github.com/FFmpeg/FFmpeg/archive/946fcce07b.tar.gz
+Build configuration and third-party library list: FFmpeg-README.txt.
+Upstream build support: https://github.com/GyanD/codexffmpeg
+FFmpeg is invoked as a separate process to decode local WebM VP9 alpha
+into BGRA pixels. It is not linked into GuguReminder.exe.
+When redistributing the decoder, preserve its license, notices and
+provide the corresponding source as required by its license.
+
+ZCOOL KuaiLe font: SIL Open Font License; see OFL.txt.
