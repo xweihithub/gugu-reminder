@@ -20,7 +20,7 @@ Swift Package 无外部依赖，最低 macOS 13。`native/App/AppController.swif
 
 ## 存档与迁移
 
-Bundle ID 继续使用 `com.zoey.goldenpaw`，存档继续位于 `~/Library/Application Support/Golden Paw/state.json`。沿用原 `reminders.intervals`、`next`、`pausedUntil` 结构和毫秒时间戳，保留仍有效的未来时间；无关历史根字段保留但不接入功能。使用同目录原子替换写入及 0600 文件权限。
+菜单栏版使用 Bundle ID `com.zoey.goldenpaw.menubar`，避开 macOS Tahoe 上旧标识的菜单栏显示状态。存档继续位于 `~/Library/Application Support/Golden Paw/state.json`。沿用原 `reminders.intervals`、`next`、`pausedUntil` 结构和毫秒时间戳，保留仍有效的未来时间；无关历史根字段保留但不接入功能。使用同目录原子替换写入及 0600 文件权限。
 
 Swift 原生代码替代 Electron 运行时，旧实现仅留在开发者本地 `artifacts/legacy-electron/` 和 Git 历史。应用包只包含原生可执行文件、Info.plist、三段 MOV、三张 PNG 以及站酷快乐体字体和 OFL 许可文本。VP9 源素材、测试、制作中间文件与构建缓存均不打包。
 

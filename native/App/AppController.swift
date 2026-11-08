@@ -84,8 +84,14 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        if verificationDirectory == nil,
-           NSRunningApplication.runningApplications(withBundleIdentifier: "com.zoey.goldenpaw").contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
+        // Older builds share the same reminder state, so keep them single-instance with the new bundle.
+        let bundleIdentifiers = Set(["com.zoey.goldenpaw", Bundle.main.bundleIdentifier ?? "com.zoey.goldenpaw"])
+        let anotherInstance = bundleIdentifiers.contains { identifier in
+            NSRunningApplication.runningApplications(withBundleIdentifier: identifier).contains {
+                $0.processIdentifier != ProcessInfo.processInfo.processIdentifier
+            }
+        }
+        if verificationDirectory == nil, anotherInstance {
             DistributedNotificationCenter.default().postNotificationName(Notification.Name("com.zoey.goldenpaw.show-settings"), object: nil, userInfo: nil, deliverImmediately: true)
             NSApp.terminate(nil); return
         }

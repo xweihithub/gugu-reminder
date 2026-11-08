@@ -35,7 +35,7 @@ make run
 
 Apple Silicon 输出为 `dist/mac-arm64/Golden Paw.app`，Intel 输出为 `dist/mac-x64/Golden Paw.app`。构建只需 Apple 开发工具，无外部 Swift 依赖、npm 或 FFmpeg。现为本地 ad-hoc 签名构建，未做 Developer ID 签名及公证。
 
-启动新版前请先退出旧版。应用包名、Bundle ID `com.zoey.goldenpaw` 和存档路径 `~/Library/Application Support/Golden Paw/state.json` 保持兼容；已有提醒设置自动沿用，历史无关字段保留但不参与运行。构建替换前的应用会存为本地 `artifacts/local-builds/previous-app.tar`。
+启动新版前请先退出旧版。菜单栏版使用 Bundle ID `com.zoey.goldenpaw.menubar`。应用包名和存档路径 `~/Library/Application Support/Golden Paw/state.json` 保持兼容；已有提醒设置自动沿用，历史无关字段保留但不参与运行。构建替换前的应用会存为本地 `artifacts/local-builds/previous-app.tar`。
 
 ## 验证与素材维护
 
