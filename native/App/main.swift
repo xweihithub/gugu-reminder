@@ -21,6 +21,7 @@ if let verificationDirectory {
         .appendingPathComponent("Library/Application Support/Golden Paw/state.json")
 }
 let assets = Bundle.main.resourceURL!.appendingPathComponent("Assets", isDirectory: true)
+CaptionFont.register(assets: assets)
 let controller = AppController(stateURL: stateURL, assets: assets, verificationDirectory: verificationDirectory)
 app.delegate = controller
 app.run()

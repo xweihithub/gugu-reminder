@@ -59,10 +59,10 @@ final class AppController: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var menu: NSMenu!
     let characterWindow = FloatingPanel(frame: NSRect(x: 0, y: 0, width: 580, height: 580))
-    let cardWindow = FloatingPanel(frame: NSRect(x: 0, y: 0, width: 480, height: 128))
+    let cardWindow = FloatingPanel(frame: NSRect(x: 0, y: 0, width: 320, height: 40))
     let settingsWindow = FloatingPanel(frame: NSRect(x: 0, y: 0, width: 390, height: 300))
     let character = CharacterView(frame: NSRect(x: 0, y: 0, width: 580, height: 580))
-    let card = ReminderCardView(frame: NSRect(x: 0, y: 0, width: 480, height: 128))
+    let card = ReminderCardView(frame: NSRect(x: 0, y: 0, width: 320, height: 40))
     let settings = SettingsView(frame: NSRect(x: 0, y: 0, width: 390, height: 300))
     lazy var animation = AnimationPlayer(view: character)
     private(set) var session: ReminderSession?
@@ -109,6 +109,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         card.done.onClick = character.onClick
         card.later.onClick = { [weak self] in self?.finish(snooze: true) }
         card.close.onClick = { [weak self] in self?.finish(snooze: false) }
+        card.onSizeChange = { [weak self] in self?.layoutWindows() }
         settings.close.onClick = { [weak self] in self?.closeSettings() }
         settings.onSave = { [weak self] values in self?.saveIntervals(values) }
         settings.load(clock.intervals)
@@ -276,9 +277,11 @@ final class AppController: NSObject, NSApplicationDelegate {
         // 小屏幕也保留顶部余量，避免整个窗口超出显示区域。
         let size = max(1, min(580, area.height * 0.68, area.width * 0.92, area.height - bottom - 16))
         characterWindow.setFrame(NSRect(x: area.midX - size / 2, y: area.minY + bottom, width: size, height: size), display: true)
-        let width = min(480, area.width - 32)
-        let height: CGFloat = session?.kind == .eyes ? 142 : 112
-        cardWindow.setFrame(NSRect(x: area.midX - width / 2, y: area.minY + min(64, max(22, area.height * 0.05)), width: width, height: height), display: true)
+        // 文字气泡与 Windows 原生版一致：尺寸随内容收缩，位于动画正下方 6 点（8 DIU）处并水平居中。
+        let cardSize = card.contentSize()
+        cardWindow.setFrame(NSRect(x: characterWindow.frame.midX - cardSize.width / 2,
+                                   y: characterWindow.frame.minY - 6 - cardSize.height,
+                                   width: cardSize.width, height: cardSize.height), display: true)
         settingsWindow.setFrameOrigin(NSPoint(x: max(area.minX + 16, area.maxX - 35 - 390), y: area.maxY - 45 - 300))
     }
     private func persist() {

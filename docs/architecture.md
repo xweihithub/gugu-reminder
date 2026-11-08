@@ -1,6 +1,6 @@
 # 定时提醒原生架构
 
-更新：2026-11-06。
+更新：2026-11-08。
 
 ## 用户已确认
 
@@ -8,7 +8,7 @@
 
 ## 当前实现
 
-Swift Package 无外部依赖，最低 macOS 13。`native/App/AppController.swift` 用 AppKit 管理菜单栏、设置、提醒窗口及 AVFoundation 播放器。三块独立非激活透明面板分别显示角色、回应区和设置；空白桌面保持点击穿透，在主显示器展示。
+Swift Package 无外部依赖，最低 macOS 13。`native/App/AppController.swift` 用 AppKit 管理菜单栏、设置、提醒窗口及 AVFoundation 播放器。三块独立非激活透明面板分别显示角色、回应区和设置；空白桌面保持点击穿透，在主显示器展示。动画下方的文字气泡与 Windows 原生版一致：奶油底圆角气泡内一行排列标题、倒计时（仅眼睛休息）、完成、稍后和关闭，尺寸随内容收缩并贴在动画正下方，文字使用随包注册的站酷快乐体（OFL 授权）。
 
 `native/Core/ReminderClock.swift` 管理三种独立计时、1–1440 分钟间隔、暂停及稍后。默认眼睛 40、走动 50、喝水 60 分钟。调度器每秒检查最早到期项，一次展示一条。设置打开时暂缓到期展示；修改项从保存时间或暂停结束后重排，其余项保留原时间。
 
@@ -22,7 +22,7 @@ Swift Package 无外部依赖，最低 macOS 13。`native/App/AppController.swif
 
 Bundle ID 继续使用 `com.zoey.goldenpaw`，存档继续位于 `~/Library/Application Support/Golden Paw/state.json`。沿用原 `reminders.intervals`、`next`、`pausedUntil` 结构和毫秒时间戳，保留仍有效的未来时间；无关历史根字段保留但不接入功能。使用同目录原子替换写入及 0600 文件权限。
 
-Swift 原生代码替代 Electron 运行时，旧实现仅留在开发者本地 `artifacts/legacy-electron/` 和 Git 历史。应用包只包含原生可执行文件、Info.plist、三段 MOV 和三张 PNG。VP9 源素材、测试、制作中间文件与构建缓存均不打包。
+Swift 原生代码替代 Electron 运行时，旧实现仅留在开发者本地 `artifacts/legacy-electron/` 和 Git 历史。应用包只包含原生可执行文件、Info.plist、三段 MOV、三张 PNG 以及站酷快乐体字体和 OFL 许可文本。VP9 源素材、测试、制作中间文件与构建缓存均不打包。
 
 ## 验证和边界
 
