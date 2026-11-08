@@ -11,10 +11,29 @@ enum Palette {
     static let cream = NSColor(srgbRed: 1, green: 0.96, blue: 0.84, alpha: 1)
 }
 
+// 清爽绿仅用于设置面板；提醒回应区保持原有暖色，避免角色画面旁出现两套视觉。
+// 所有文字与按钮配色经对比度检查：正文 ≥ 5.2:1，按钮文字 ≥ 6.2:1。
+enum SettingsPalette {
+    static let ink = NSColor(srgbRed: 0.071, green: 0.239, blue: 0.153, alpha: 1)      // #123D27
+    static let muted = NSColor(srgbRed: 0.271, green: 0.435, blue: 0.345, alpha: 1)    // #456F58
+    static let accent = NSColor(srgbRed: 0.169, green: 0.451, blue: 0.314, alpha: 1)   // #2B7350
+    static let top = NSColor(srgbRed: 0.929, green: 0.976, blue: 0.945, alpha: 1)      // #EDF9F1
+    static let bottom = NSColor(srgbRed: 0.984, green: 0.996, blue: 0.988, alpha: 1)   // #FBFEFC
+    static let line = NSColor(srgbRed: 0.749, green: 0.902, blue: 0.820, alpha: 1)     // #BFE6D1
+    static let field = NSColor(srgbRed: 0.957, green: 0.992, blue: 0.969, alpha: 1)    // #F4FDF7
+    static let primaryFill = NSColor(srgbRed: 0.263, green: 0.788, blue: 0.541, alpha: 1)  // #43C98A
+    static let primaryInk = NSColor(srgbRed: 0.043, green: 0.220, blue: 0.129, alpha: 1)   // #0B3821
+    static let primaryBorder = NSColor(srgbRed: 0.082, green: 0.478, blue: 0.294, alpha: 1) // #157A4B
+    static let softFill = NSColor(srgbRed: 0.910, green: 0.969, blue: 0.929, alpha: 1) // #E8F7ED
+    static let softInk = NSColor(srgbRed: 0.184, green: 0.373, blue: 0.286, alpha: 1)  // #2F5F49
+    static let softBorder = NSColor(srgbRed: 0.663, green: 0.851, blue: 0.737, alpha: 1) // #A9D9BC
+}
+
 final class ActionButton: NSButton {
     var onClick: (() -> Void)?
     var fill = Palette.paper
     var ink = Palette.ink
+    var border = Palette.line
     var pill = true
     var hover = false
     private var hoverTracking: NSTrackingArea?
@@ -44,7 +63,7 @@ final class ActionButton: NSButton {
         let path = NSBezierPath(roundedRect: rect, xRadius: pill ? rect.height / 2 : 8, yRadius: pill ? rect.height / 2 : 8)
         (hover && isEnabled ? fill.blended(withFraction: 0.08, of: .white)! : fill).withAlphaComponent(isEnabled ? 0.96 : 0.65).setFill()
         path.fill()
-        Palette.line.withAlphaComponent(0.75).setStroke(); path.lineWidth = 1; path.stroke()
+        border.withAlphaComponent(0.75).setStroke(); path.lineWidth = 1; path.stroke()
         let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: ink.withAlphaComponent(isEnabled ? 1 : 0.65)]
         let size = title.size(withAttributes: attrs)
         title.draw(at: NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2), withAttributes: attrs)
@@ -167,33 +186,36 @@ final class ReminderCardView: NSView {
 final class SettingsView: NSView {
     var fields: [ReminderKind: NSTextField] = [:]
     let status = NSTextField(labelWithString: "修改的项目从保存时重新计时")
-    let save = ActionButton("保存", fill: Palette.green, ink: .white)
-    let close = ActionButton("×", ink: Palette.muted)
+    let save = ActionButton("保存", fill: SettingsPalette.primaryFill, ink: SettingsPalette.primaryInk)
+    let close = ActionButton("×", fill: SettingsPalette.softFill, ink: SettingsPalette.softInk)
+    private let background = CAGradientLayer()
     var onSave: (([String: Any]) -> Void)?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = Palette.paper.cgColor
-        layer?.cornerRadius = 24
-        layer?.borderWidth = 1; layer?.borderColor = Palette.line.cgColor
+        background.colors = [SettingsPalette.top.cgColor, SettingsPalette.bottom.cgColor]
+        background.startPoint = CGPoint(x: 0.5, y: 1); background.endPoint = CGPoint(x: 0.5, y: 0)
+        background.cornerRadius = 24; background.masksToBounds = true
+        background.borderWidth = 1; background.borderColor = SettingsPalette.line.cgColor
+        layer?.addSublayer(background)
         func label(_ text: String, _ frame: NSRect, size: CGFloat, color: NSColor, weight: NSFont.Weight = .regular) {
             let field = NSTextField(labelWithString: text); field.frame = frame
             field.font = .systemFont(ofSize: size, weight: weight); field.textColor = color
             addSubview(field)
         }
-        label("GUGUGAGA", NSRect(x: 24, y: 262, width: 200, height: 14), size: 9, color: Palette.muted)
-        label("提醒设置", NSRect(x: 24, y: 223, width: 220, height: 32), size: 23, color: Palette.ink, weight: .semibold)
-        label("平时安静等待，到时间再出来提醒你。", NSRect(x: 24, y: 188, width: 342, height: 18), size: 11, color: Palette.muted)
-        label("提醒间隔", NSRect(x: 24, y: 153, width: 180, height: 20), size: 12, color: Palette.ink, weight: .semibold)
-        label("单位：分钟", NSRect(x: 300, y: 155, width: 70, height: 16), size: 9, color: Palette.muted)
+        label("GUGUGAGA", NSRect(x: 24, y: 262, width: 200, height: 14), size: 9, color: SettingsPalette.accent, weight: .medium)
+        label("提醒设置", NSRect(x: 24, y: 223, width: 220, height: 32), size: 23, color: SettingsPalette.ink, weight: .semibold)
+        label("平时安静等待，到时间再出来提醒你。", NSRect(x: 24, y: 188, width: 342, height: 18), size: 11, color: SettingsPalette.muted)
+        label("提醒间隔", NSRect(x: 24, y: 153, width: 180, height: 20), size: 12, color: SettingsPalette.ink, weight: .semibold)
+        label("单位：分钟", NSRect(x: 300, y: 155, width: 70, height: 16), size: 9, color: SettingsPalette.muted)
         for (i, kind) in [ReminderKind.water, .walk, .eyes].enumerated() {
             let x = CGFloat(24 + i * 117)
             let emoji = kind == .water ? "💧" : kind == .walk ? "🐧" : "👀"
-            label("\(emoji) \(kind.label)", NSRect(x: x, y: 124, width: 110, height: 18), size: 10, color: Palette.ink)
+            label("\(emoji) \(kind.label)", NSRect(x: x, y: 124, width: 110, height: 18), size: 10, color: SettingsPalette.ink)
             let field = NSTextField(frame: NSRect(x: x, y: 78, width: 108, height: 35))
-            field.font = .systemFont(ofSize: 13); field.textColor = Palette.ink
-            field.backgroundColor = .white; field.isBezeled = true; field.bezelStyle = .roundedBezel
+            field.font = .systemFont(ofSize: 13); field.textColor = SettingsPalette.ink
+            field.backgroundColor = SettingsPalette.field; field.isBezeled = true; field.bezelStyle = .roundedBezel
             field.setAccessibilityLabel("\(kind.label)提醒间隔（分钟）")
             fields[kind] = field; addSubview(field)
         }
@@ -201,16 +223,24 @@ final class SettingsView: NSView {
         fields[.walk]?.nextKeyView = fields[.eyes]
         fields[.eyes]?.nextKeyView = save
         status.frame = NSRect(x: 24, y: 25, width: 260, height: 32)
-        status.font = .systemFont(ofSize: 10); status.textColor = Palette.muted
+        status.font = .systemFont(ofSize: 10); status.textColor = SettingsPalette.muted
         status.maximumNumberOfLines = 2; status.setAccessibilityRole(.staticText)
         addSubview(status)
         save.frame = NSRect(x: 310, y: 27, width: 56, height: 31); save.pill = false
+        save.border = SettingsPalette.primaryBorder
         save.onClick = { [weak self] in self?.submit() }
         addSubview(save)
         close.frame = NSRect(x: 338, y: 252, width: 29, height: 29)
+        close.border = SettingsPalette.softBorder
         close.setAccessibilityLabel("关闭设置"); addSubview(close)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func layout() {
+        super.layout()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        background.frame = bounds
+        CATransaction.commit()
+    }
     func load(_ intervals: [ReminderKind: Int]) {
         for (kind, field) in fields { field.stringValue = String(intervals[kind]!) }
     }
