@@ -13,11 +13,12 @@ binary_dir="$(xcrun swift build --disable-sandbox -c release --scratch-path .bui
 
 # 新构建先放暂存目录，成功后再替换应用；旧版存为 tar，避免被系统识别为另一份应用。
 staging="$output_dir/Golden Paw.new.app"
-mkdir -p "$staging/Contents/MacOS" "$staging/Contents/Resources/Assets"
+mkdir -p "$staging/Contents/MacOS" "$staging/Contents/Resources/Assets/fonts"
 cp "$binary_dir/GuguReminder" "$staging/Contents/MacOS/GuguReminder"
 for kind in water walk eyes; do
   cp "Assets/gugugaga-${kind}-alpha.mov" "Assets/gugugaga-${kind}-rest.png" "$staging/Contents/Resources/Assets/"
 done
+cp Assets/fonts/ZCOOLKuaiLe-Regular.ttf Assets/fonts/OFL.txt "$staging/Contents/Resources/Assets/fonts/"
 cat > "$staging/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

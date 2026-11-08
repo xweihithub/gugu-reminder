@@ -1,6 +1,38 @@
 import AppKit
 import AVFoundation
+import CoreText
 import ReminderCore
+
+// 动画下方文字气泡与 Windows 原生版一致：奶油底圆角气泡、站酷快乐体、标题与按钮同一行。
+enum CaptionPalette {
+    static let bubble = NSColor(srgbRed: 1, green: 0.9804, blue: 0.9412, alpha: 1)       // #FFFAF0
+    static let title = NSColor(srgbRed: 0.3647, green: 0.2902, blue: 0.2078, alpha: 1)   // #5D4A35
+    static let counter = NSColor(srgbRed: 0.5490, green: 0.3882, blue: 0.4588, alpha: 1) // #8C6375
+    static let ink = NSColor(srgbRed: 0.3490, green: 0.2353, blue: 0.2980, alpha: 1)     // #593C4C
+    static let line = NSColor(srgbRed: 0.9412, green: 0.8627, blue: 0.9020, alpha: 1)    // #F0DCE6
+    static let doneFill = NSColor(srgbRed: 0.8824, green: 0.9216, blue: 0.8275, alpha: 1) // #E1EBD3
+    static let doneInk = NSColor(srgbRed: 0.3294, green: 0.4392, blue: 0.2667, alpha: 1) // #547044
+}
+
+enum CaptionFont {
+    private static var attempted = false
+    // 启动时从应用包 Assets/fonts 注册站酷快乐体（OFL 授权，许可文本随包携带）；失败回退系统字体。
+    static func register(assets: URL) {
+        guard !attempted else { return }
+        attempted = true
+        let url = assets.appendingPathComponent("fonts/ZCOOLKuaiLe-Regular.ttf")
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        var error: Unmanaged<CFError>?
+        if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
+            NSLog("注册提醒气泡字体失败: %@", error?.takeRetainedValue().localizedDescription ?? "未知错误")
+        }
+    }
+    static func font(_ size: CGFloat) -> NSFont {
+        NSFont(name: "ZCOOL KuaiLe", size: size)
+            ?? NSFont(name: "ZCOOLKuaiLe-Regular", size: size)
+            ?? NSFont.systemFont(ofSize: size)
+    }
+}
 
 enum Palette {
     static let ink = NSColor(srgbRed: 0.286, green: 0.216, blue: 0.165, alpha: 1)
@@ -35,6 +67,7 @@ final class ActionButton: NSButton {
     var ink = Palette.ink
     var border = Palette.line
     var pill = true
+    var cornerRadius: CGFloat = 8
     var hover = false
     private var hoverTracking: NSTrackingArea?
 
@@ -60,9 +93,11 @@ final class ActionButton: NSButton {
     override func resetCursorRects() { addCursorRect(bounds, cursor: isEnabled ? .pointingHand : .arrow) }
     override func draw(_ dirtyRect: NSRect) {
         let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
-        let path = NSBezierPath(roundedRect: rect, xRadius: pill ? rect.height / 2 : 8, yRadius: pill ? rect.height / 2 : 8)
-        (hover && isEnabled ? fill.blended(withFraction: 0.08, of: .white)! : fill).withAlphaComponent(isEnabled ? 0.96 : 0.65).setFill()
-        path.fill()
+        let path = NSBezierPath(roundedRect: rect, xRadius: pill ? rect.height / 2 : cornerRadius, yRadius: pill ? rect.height / 2 : cornerRadius)
+        if fill.alphaComponent > 0 {
+            (hover && isEnabled ? fill.blended(withFraction: 0.08, of: .white)! : fill).withAlphaComponent(isEnabled ? 0.96 : 0.65).setFill()
+            path.fill()
+        }
         border.withAlphaComponent(0.75).setStroke(); path.lineWidth = 1; path.stroke()
         let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: ink.withAlphaComponent(isEnabled ? 1 : 0.65)]
         let size = title.size(withAttributes: attrs)
@@ -122,64 +157,112 @@ final class CharacterView: NSView {
     override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }
 
+// 动画下方的文字气泡与 Windows 原生版一致：奶油底圆角气泡内一行排开
+// 标题、倒计时（仅眼睛休息）、完成、稍后和关闭；尺寸随内容收缩，贴在动画正下方。
 final class ReminderCardView: NSView {
-    let done = ActionButton("喝好了", fill: NSColor(srgbRed: 0.60, green: 0.88, blue: 0.86, alpha: 1), ink: NSColor(srgbRed: 0.09, green: 0.29, blue: 0.28, alpha: 1))
-    let later = ActionButton("稍后")
-    let close = ActionButton("×", fill: NSColor(srgbRed: 0.27, green: 0.21, blue: 0.15, alpha: 0.7), ink: Palette.paper)
+    let title = NSTextField(labelWithString: "")
+    let counter = NSTextField(labelWithString: "")
+    let done = ActionButton("喝好了", fill: CaptionPalette.doneFill, ink: CaptionPalette.doneInk)
+    let later = ActionButton("稍后", fill: .clear, ink: CaptionPalette.ink)
+    let close = ActionButton("×", fill: .clear, ink: CaptionPalette.ink)
     var kind: ReminderKind = .water
     var titleText = "喝口水吧"
     var remaining = 20
-    var progress = 0.0
     var ready = false
     var onEscape: (() -> Void)?
+    var onSizeChange: (() -> Void)?
+
+    private let bubbleRadius: CGFloat = 13.5      // 18 DIU
+    private let padLeading: CGFloat = 9           // 12 DIU
+    private let padY: CGFloat = 6                 // 8 DIU
+    private let padTrailing: CGFloat = 6          // 8 DIU
+    private let titleGap: CGFloat = 7             // 9 DIU
+    private let itemGap: CGFloat = 6              // 8 DIU
+    private let titleSize: CGFloat = 14.25        // 19 DIU
+    private let controlSize: CGFloat = 10.5       // 14 DIU
 
     override init(frame: NSRect) {
         super.init(frame: frame)
-        [done, later, close].forEach(addSubview)
+        title.textColor = CaptionPalette.title
+        counter.textColor = CaptionPalette.counter
+        [done, later, close].forEach {
+            $0.pill = false; $0.cornerRadius = 7.5; $0.border = CaptionPalette.line
+        }
+        [title, counter, done, later, close].forEach(addSubview)
         close.setAccessibilityLabel("关闭提醒")
         setAccessibilityRole(.group)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    private struct Row {
+        var title: NSSize = .zero, counter: NSSize = .zero, button: NSSize = .zero
+        var doneWidth: CGFloat = 0, laterWidth: CGFloat = 0, closeWidth: CGFloat = 0
+        var counterVisible = false
+        var total: NSSize = .zero
+    }
+    private func measure() -> Row {
+        title.font = CaptionFont.font(titleSize)
+        counter.font = CaptionFont.font(controlSize)
+        [done, later, close].forEach { $0.font = CaptionFont.font(controlSize) }
+        title.stringValue = titleText
+        title.sizeToFit()
+        var row = Row()
+        row.title = title.fittingSize
+        row.counterVisible = kind == .eyes
+        if row.counterVisible {
+            counter.stringValue = remaining == 0 ? "✓" : "\(remaining) 秒"
+            counter.sizeToFit()
+            row.counter = counter.fittingSize
+        }
+        let line = title.font!.boundingRectForFont.height
+        row.button = NSSize(width: 0, height: ceil(CaptionFont.font(controlSize).boundingRectForFont.height) + 8)
+        func buttonWidth(_ button: NSButton, _ padX: CGFloat) -> CGFloat {
+            ceil(button.title.size(withAttributes: [.font: button.font!]).width) + padX * 2 + 2
+        }
+        row.doneWidth = buttonWidth(done, 7)   // 9 DIU
+        row.laterWidth = buttonWidth(later, 5) // 7 DIU
+        row.closeWidth = buttonWidth(close, 3) // 4 DIU
+        let rowHeight = max(line, row.button.height)
+        var width = padLeading + row.title.width + titleGap + row.doneWidth + itemGap + row.laterWidth + itemGap + row.closeWidth + padTrailing
+        if row.counterVisible { width += row.counter.width + itemGap }
+        row.total = NSSize(width: ceil(width), height: ceil(rowHeight + padY * 2))
+        return row
+    }
+    func contentSize() -> NSSize { measure().total }
+
     override func layout() {
         super.layout()
-        let width: CGFloat = kind == .eyes && !ready ? 116 : 88
-        done.frame = NSRect(x: (bounds.width - width - 76) / 2, y: 1, width: width, height: 32)
-        later.frame = NSRect(x: done.frame.maxX + 10, y: 1, width: 66, height: 32)
-        close.frame = NSRect(x: bounds.width - 28, y: bounds.height - 28, width: 27, height: 27)
+        let row = measure()
+        counter.isHidden = !row.counterVisible
+        let rowY = (bounds.height - max(row.title.height, row.button.height)) / 2
+        var x = padLeading
+        title.frame = NSRect(x: x, y: (bounds.height - row.title.height) / 2, width: row.title.width, height: row.title.height)
+        x += row.title.width + titleGap
+        if row.counterVisible {
+            counter.frame = NSRect(x: x, y: (bounds.height - row.counter.height) / 2, width: row.counter.width, height: row.counter.height)
+            x += row.counter.width + itemGap
+        }
+        done.frame = NSRect(x: x, y: rowY, width: row.doneWidth, height: row.button.height)
+        later.frame = NSRect(x: done.frame.maxX + itemGap, y: rowY, width: row.laterWidth, height: row.button.height)
+        close.frame = NSRect(x: later.frame.maxX + itemGap, y: rowY, width: row.closeWidth, height: row.button.height)
     }
     func update(session: ReminderSession, now: Double) {
         kind = session.kind; ready = session.stage == .ready
         titleText = kind == .eyes && ready ? "好啦，慢慢回来" : kind.title
-        remaining = session.remaining(now: now); progress = session.progress(now: now)
+        remaining = session.remaining(now: now)
         done.title = kind == .eyes && !ready ? "陪你休息中…" : kind.doneTitle
         done.isEnabled = ready
         done.setAccessibilityLabel(done.title)
         later.toolTip = "\(kind.snoozeMinutes) 分钟后提醒"
         later.setAccessibilityLabel(later.toolTip)
         setAccessibilityLabel(kind == .eyes ? "\(titleText)，剩余 \(remaining) 秒" : titleText)
-        needsLayout = true; needsDisplay = true
+        let size = contentSize()
+        if size != bounds.size { onSizeChange?() } else { needsLayout = true }
+        needsDisplay = true
     }
     override func draw(_ dirtyRect: NSRect) {
-        let shadow = NSShadow(); shadow.shadowColor = NSColor(srgbRed: 0.29, green: 0.18, blue: 0.11, alpha: 0.8)
-        shadow.shadowOffset = NSSize(width: 0, height: -2); shadow.shadowBlurRadius = 4
-        let fontSize = min(46, max(30, (window?.screen?.visibleFrame.width ?? 1200) * 0.04))
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont(name: "Songti SC Bold", size: fontSize) ?? NSFont.systemFont(ofSize: fontSize, weight: .bold),
-            .foregroundColor: Palette.cream, .shadow: shadow,
-            .strokeColor: NSColor(srgbRed: 0.58, green: 0.40, blue: 0.24, alpha: 1), .strokeWidth: -1,
-            .kern: 3
-        ]
-        let size = titleText.size(withAttributes: attrs)
-        titleText.draw(at: NSPoint(x: (bounds.width - size.width) / 2, y: bounds.height - size.height - 3), withAttributes: attrs)
-        if kind == .eyes {
-            let track = NSRect(x: (bounds.width - 190) / 2, y: 51, width: 126, height: 3)
-            NSColor.gray.withAlphaComponent(0.4).setFill()
-            NSBezierPath(roundedRect: track, xRadius: 2, yRadius: 2).fill()
-            NSColor(srgbRed: 0.72, green: 0.95, blue: 0.91, alpha: 1).setFill()
-            NSBezierPath(roundedRect: NSRect(x: track.minX, y: track.minY, width: track.width * progress, height: 3), xRadius: 2, yRadius: 2).fill()
-            let text = remaining == 0 ? "✓ 秒" : "\(remaining) 秒"
-            text.draw(at: NSPoint(x: track.maxX + 12, y: 45), withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Palette.cream, .shadow: shadow])
-        }
+        CaptionPalette.bubble.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: bubbleRadius, yRadius: bubbleRadius).fill()
     }
 }
 
