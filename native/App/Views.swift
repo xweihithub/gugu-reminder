@@ -52,7 +52,6 @@ enum SettingsPalette {
     static let top = NSColor(srgbRed: 0.929, green: 0.976, blue: 0.945, alpha: 1)      // #EDF9F1
     static let bottom = NSColor(srgbRed: 0.984, green: 0.996, blue: 0.988, alpha: 1)   // #FBFEFC
     static let line = NSColor(srgbRed: 0.749, green: 0.902, blue: 0.820, alpha: 1)     // #BFE6D1
-    static let field = NSColor(srgbRed: 0.957, green: 0.992, blue: 0.969, alpha: 1)    // #F4FDF7
     static let primaryFill = NSColor(srgbRed: 0.263, green: 0.788, blue: 0.541, alpha: 1)  // #43C98A
     static let primaryInk = NSColor(srgbRed: 0.043, green: 0.220, blue: 0.129, alpha: 1)   // #0B3821
     static let primaryBorder = NSColor(srgbRed: 0.082, green: 0.478, blue: 0.294, alpha: 1) // #157A4B
@@ -267,7 +266,9 @@ final class ReminderCardView: NSView {
 }
 
 final class SettingsView: NSView {
-    var fields: [ReminderKind: NSTextField] = [:]
+    // 下拉档位覆盖常用提醒节奏；存档中的其他历史数值作为附加项保留显示，不被吞掉。
+    static let presets = [5, 10, 15, 20, 25, 30, 40, 45, 50, 60, 90, 120]
+    var pickers: [ReminderKind: NSPopUpButton] = [:]
     let status = NSTextField(labelWithString: "修改的项目从保存时重新计时")
     let save = ActionButton("保存", fill: SettingsPalette.primaryFill, ink: SettingsPalette.primaryInk)
     let close = ActionButton("×", fill: SettingsPalette.softFill, ink: SettingsPalette.softInk)
@@ -277,6 +278,8 @@ final class SettingsView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
+        // 面板为固定的浅色设计，系统深色外观下也要保留下拉框的浅色可读样式。
+        appearance = NSAppearance(named: .aqua)
         background.colors = [SettingsPalette.top.cgColor, SettingsPalette.bottom.cgColor]
         background.startPoint = CGPoint(x: 0.5, y: 1); background.endPoint = CGPoint(x: 0.5, y: 0)
         background.cornerRadius = 24; background.masksToBounds = true
@@ -291,20 +294,18 @@ final class SettingsView: NSView {
         label("提醒设置", NSRect(x: 24, y: 223, width: 220, height: 32), size: 23, color: SettingsPalette.ink, weight: .semibold)
         label("平时安静等待，到时间再出来提醒你。", NSRect(x: 24, y: 188, width: 342, height: 18), size: 11, color: SettingsPalette.muted)
         label("提醒间隔", NSRect(x: 24, y: 153, width: 180, height: 20), size: 12, color: SettingsPalette.ink, weight: .semibold)
-        label("单位：分钟", NSRect(x: 300, y: 155, width: 70, height: 16), size: 9, color: SettingsPalette.muted)
         for (i, kind) in [ReminderKind.water, .walk, .eyes].enumerated() {
             let x = CGFloat(24 + i * 117)
             let emoji = kind == .water ? "💧" : kind == .walk ? "🐧" : "👀"
             label("\(emoji) \(kind.label)", NSRect(x: x, y: 124, width: 110, height: 18), size: 10, color: SettingsPalette.ink)
-            let field = NSTextField(frame: NSRect(x: x, y: 78, width: 108, height: 35))
-            field.font = .systemFont(ofSize: 13); field.textColor = SettingsPalette.ink
-            field.backgroundColor = SettingsPalette.field; field.isBezeled = true; field.bezelStyle = .roundedBezel
-            field.setAccessibilityLabel("\(kind.label)提醒间隔（分钟）")
-            fields[kind] = field; addSubview(field)
+            let picker = NSPopUpButton(frame: NSRect(x: x, y: 81, width: 108, height: 28), pullsDown: false)
+            picker.font = .systemFont(ofSize: 13)
+            picker.setAccessibilityLabel("\(kind.label)提醒间隔（分钟）")
+            pickers[kind] = picker; addSubview(picker)
         }
-        fields[.water]?.nextKeyView = fields[.walk]
-        fields[.walk]?.nextKeyView = fields[.eyes]
-        fields[.eyes]?.nextKeyView = save
+        pickers[.water]?.nextKeyView = pickers[.walk]
+        pickers[.walk]?.nextKeyView = pickers[.eyes]
+        pickers[.eyes]?.nextKeyView = save
         status.frame = NSRect(x: 24, y: 25, width: 260, height: 32)
         status.font = .systemFont(ofSize: 10); status.textColor = SettingsPalette.muted
         status.maximumNumberOfLines = 2; status.setAccessibilityRole(.staticText)
@@ -325,17 +326,27 @@ final class SettingsView: NSView {
         CATransaction.commit()
     }
     func load(_ intervals: [ReminderKind: Int]) {
-        for (kind, field) in fields { field.stringValue = String(intervals[kind]!) }
+        for (kind, picker) in pickers {
+            picker.removeAllItems()
+            let minutes = intervals[kind]!
+            let options = Self.presets.contains(minutes) ? Self.presets : (Self.presets + [minutes]).sorted()
+            for option in options {
+                picker.addItem(withTitle: "\(option) 分钟")
+                picker.lastItem?.representedObject = option
+            }
+            select(minutes, for: kind)
+        }
+        status.stringValue = "修改的项目从保存时重新计时"
+    }
+    func select(_ minutes: Int, for kind: ReminderKind) {
+        guard let item = pickers[kind]?.itemArray.first(where: { $0.representedObject as? Int == minutes }) else { return }
+        pickers[kind]?.select(item)
     }
     func submit() {
         var values: [String: Any] = [:]
-        for (kind, field) in fields {
-            let text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let number = Int(text), (1...1440).contains(number) else {
-                status.stringValue = ReminderError.invalidInterval.localizedDescription
-                window?.makeFirstResponder(field); return
-            }
-            values[kind.rawValue] = number
+        for (kind, picker) in pickers {
+            guard let minutes = picker.selectedItem?.representedObject as? Int else { return }
+            values[kind.rawValue] = minutes
         }
         onSave?(values)
     }

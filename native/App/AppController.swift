@@ -241,7 +241,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         if verificationDirectory == nil {
             settingsWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
-            settingsWindow.makeFirstResponder(settings.fields[.water])
+            settingsWindow.makeFirstResponder(settings.pickers[.water])
         } else { settingsWindow.orderFrontRegardless() }
     }
     func closeSettings() {
@@ -258,8 +258,9 @@ final class AppController: NSObject, NSApplicationDelegate {
                 NSLog("保存提醒设置失败: %@", error.localizedDescription)
                 return
             }
-            settings.load(clock.intervals)
             settings.status.stringValue = "已保存，重启后也会保留"
+            // 保存生效后直接关闭设置界面；关闭会顺带恢复展示到期提醒。
+            closeSettings()
         } catch {
             settings.status.stringValue = error.localizedDescription
         }
