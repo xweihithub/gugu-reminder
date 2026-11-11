@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import ReminderCore
 
+@MainActor
 final class AnimationPlayer {
     let view: CharacterView
     private(set) var player: AVPlayer?
@@ -14,12 +15,12 @@ final class AnimationPlayer {
     func start(kind: ReminderKind, reduced: Bool, assets: URL) {
         stop()
         failed = false
-        view.stillView.image = NSImage(contentsOf: assets.appendingPathComponent("gugugaga-\(kind.rawValue)-rest.png"))
+        view.stillView.image = NSImage(contentsOf: CustomCharacterLibrary.still(in: assets, kind: kind))
         view.stillView.isHidden = false
         view.playerLayer.isHidden = true
         usingStill = true
         guard !reduced else { return }
-        let url = assets.appendingPathComponent("gugugaga-\(kind.rawValue)-alpha.mov")
+        let url = CustomCharacterLibrary.movie(in: assets, kind: kind)
         guard FileManager.default.fileExists(atPath: url.path) else { failed = true; return }
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
@@ -28,7 +29,10 @@ final class AnimationPlayer {
         view.playerLayer.player = player
         itemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             guard item.status == .failed else { return }
-            DispatchQueue.main.async { self?.showStill(failed: true) }
+            DispatchQueue.main.async {
+                guard let self, self.player?.currentItem === item else { return }
+                self.showStill(failed: true)
+            }
         }
         layerObservation = view.playerLayer.observe(\.isReadyForDisplay, options: [.initial, .new]) { [weak self] layer, _ in
             guard layer.isReadyForDisplay else { return }
@@ -51,8 +55,10 @@ final class AnimationPlayer {
     }
 }
 
+@MainActor
 final class AppController: NSObject, NSApplicationDelegate {
     let store: StateStore
+    let customCharacter: CustomCharacterLibrary
     let assets: URL
     let verificationDirectory: URL?
     var clock: ReminderClock { store.clock }
@@ -65,6 +71,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     let card = ReminderCardView(frame: NSRect(x: 0, y: 0, width: 320, height: 40))
     let settings = SettingsView(frame: NSRect(x: 0, y: 0, width: 390, height: 300))
     lazy var animation = AnimationPlayer(view: character)
+    private(set) lazy var characterStudio = CharacterStudio(library: customCharacter)
     private(set) var session: ReminderSession?
     private var scheduler: Timer?
     private var playbackTimer: Timer?
@@ -78,6 +85,8 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     init(stateURL: URL, assets: URL, verificationDirectory: URL? = nil) {
         store = StateStore(url: stateURL)
+        customCharacter = CustomCharacterLibrary(root: stateURL.deletingLastPathComponent()
+            .appendingPathComponent("CustomCharacter", isDirectory: true))
         self.assets = assets; self.verificationDirectory = verificationDirectory
         super.init()
     }
@@ -95,6 +104,7 @@ final class AppController: NSObject, NSApplicationDelegate {
             DistributedNotificationCenter.default().postNotificationName(Notification.Name("com.zoey.goldenpaw.show-settings"), object: nil, userInfo: nil, deliverImmediately: true)
             NSApp.terminate(nil); return
         }
+        customCharacter.removeUnusedProfiles()
         characterWindow.contentView = character; cardWindow.contentView = card; settingsWindow.contentView = settings
         if verificationDirectory != nil {
             // 自动验证显示真实画面，但不截获用户正在进行的鼠标操作。
@@ -118,6 +128,11 @@ final class AppController: NSObject, NSApplicationDelegate {
         card.onSizeChange = { [weak self] in self?.layoutWindows() }
         settings.close.onClick = { [weak self] in self?.closeSettings() }
         settings.onSave = { [weak self] values in self?.saveIntervals(values) }
+        settings.customCharacter.onClick = { [weak self] in
+            guard let self else { return }
+            self.closeSettings()
+            self.characterStudio.open(interactive: self.verificationDirectory == nil)
+        }
         settings.load(clock.intervals)
         configureMenus()
         layoutWindows()
@@ -131,7 +146,12 @@ final class AppController: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(woke), name: NSWorkspace.didWakeNotification, object: nil)
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: Notification.Name("com.zoey.goldenpaw.show-settings"), object: nil)
         persist()
-        scheduler = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.checkDue() }
+        scheduler = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.checkDue()
+                self?.customCharacter.checkForResults()
+            }
+        }
         RunLoop.main.add(scheduler!, forMode: .common)
         if let verificationDirectory {
             verification = NativeVerification(app: self, output: verificationDirectory)
@@ -179,8 +199,10 @@ final class AppController: NSObject, NSApplicationDelegate {
         characterWindow.alphaValue = 1; characterWindow.ignoresMouseEvents = false
         characterWindow.orderFrontRegardless()
         cardWindow.orderOut(nil)
-        animation.start(kind: kind, reduced: reducedMotion, assets: assets)
-        playbackTimer = Timer(timeInterval: 0.03, repeats: true) { [weak self] _ in self?.tick() }
+        animation.start(kind: kind, reduced: reducedMotion, assets: customCharacter.playbackAssets(for: kind) ?? assets)
+        playbackTimer = Timer(timeInterval: 0.03, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
         RunLoop.main.add(playbackTimer!, forMode: .common)
         tick()
     }
@@ -223,11 +245,14 @@ final class AppController: NSObject, NSApplicationDelegate {
         cardWindow.orderOut(nil)
         animation.player?.pause()
         if animate && !reducedMotion {
+            let finishingSession = ObjectIdentifier(active)
             NSAnimationContext.runAnimationGroup({ context in
                 context.duration = 0.35; characterWindow.animator().alphaValue = 0
-            }, completionHandler: { [weak self, weak active] in
-                guard let self, let active, self.session === active else { return }
-                self.dismiss()
+            }, completionHandler: { [weak self] in
+                DispatchQueue.main.async {
+                    guard let self, let current = self.session, ObjectIdentifier(current) == finishingSession else { return }
+                    self.dismiss()
+                }
             })
         } else { dismiss() }
     }

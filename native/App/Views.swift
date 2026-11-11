@@ -272,6 +272,7 @@ final class SettingsView: NSView {
     let status = NSTextField(labelWithString: "修改的项目从保存时重新计时")
     let save = ActionButton("保存", fill: SettingsPalette.primaryFill, ink: SettingsPalette.primaryInk)
     let close = ActionButton("×", fill: SettingsPalette.softFill, ink: SettingsPalette.softInk)
+    let customCharacter = ActionButton("自定义形象", fill: SettingsPalette.softFill, ink: SettingsPalette.softInk)
     private let background = CAGradientLayer()
     var onSave: (([String: Any]) -> Void)?
 
@@ -292,6 +293,9 @@ final class SettingsView: NSView {
         }
         label("GUGUGAGA", NSRect(x: 24, y: 262, width: 200, height: 14), size: 9, color: SettingsPalette.accent, weight: .medium)
         label("提醒设置", NSRect(x: 24, y: 223, width: 220, height: 32), size: 23, color: SettingsPalette.ink, weight: .semibold)
+        customCharacter.frame = NSRect(x: 254, y: 211, width: 112, height: 28)
+        customCharacter.border = SettingsPalette.softBorder
+        addSubview(customCharacter)
         label("平时安静等待，到时间再出来提醒你。", NSRect(x: 24, y: 188, width: 342, height: 18), size: 11, color: SettingsPalette.muted)
         label("提醒间隔", NSRect(x: 24, y: 153, width: 180, height: 20), size: 12, color: SettingsPalette.ink, weight: .semibold)
         for (i, kind) in [ReminderKind.water, .walk, .eyes].enumerated() {
@@ -306,6 +310,8 @@ final class SettingsView: NSView {
         pickers[.water]?.nextKeyView = pickers[.walk]
         pickers[.walk]?.nextKeyView = pickers[.eyes]
         pickers[.eyes]?.nextKeyView = save
+        save.nextKeyView = customCharacter
+        customCharacter.nextKeyView = close
         status.frame = NSRect(x: 24, y: 25, width: 260, height: 32)
         status.font = .systemFont(ofSize: 10); status.textColor = SettingsPalette.muted
         status.maximumNumberOfLines = 2; status.setAccessibilityRole(.staticText)

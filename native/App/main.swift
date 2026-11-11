@@ -22,6 +22,8 @@ if let verificationDirectory {
 }
 let assets = Bundle.main.resourceURL!.appendingPathComponent("Assets", isDirectory: true)
 CaptionFont.register(assets: assets)
-let controller = AppController(stateURL: stateURL, assets: assets, verificationDirectory: verificationDirectory)
-app.delegate = controller
-app.run()
+MainActor.assumeIsolated {
+    let controller = AppController(stateURL: stateURL, assets: assets, verificationDirectory: verificationDirectory)
+    app.delegate = controller
+    withExtendedLifetime(controller) { app.run() }
+}

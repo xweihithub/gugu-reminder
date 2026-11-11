@@ -3,6 +3,7 @@ import AppKit
 import AVFoundation
 import ReminderCore
 
+@MainActor
 final class NativeVerification {
     unowned let app: AppController
     let output: URL
@@ -201,5 +202,79 @@ final class NativeVerification {
         try await waitUntil({ app.session == nil })
         try require(abs(app.clock.next[.water]! - ReminderClock.now - 30 * 60000) < 2000, "Esc 未使用正常间隔")
         passed("提醒中打开设置、Esc 关闭与正常间隔重排")
+        try await verifyCustomCharacter()
+    }
+
+    private func verifyCustomCharacter() async throws {
+        let library = app.customCharacter
+        library.chooseReference(CustomCharacterLibrary.still(in: app.assets, kind: .walk))
+        try await waitUntil({ !library.busy }, timeout: 20)
+        try require(library.hasDraft && library.reference != nil, "无法准备参考图：\(library.message)")
+        app.openSettings()
+        app.settings.customCharacter.performClick(nil)
+        guard let studio = app.characterStudio.window, studio.isVisible, !app.settingsVisible,
+              let studioView = studio.contentView else { throw Failure(description: "设置无法打开自定义形象") }
+        studioView.displayIfNeeded()
+        if let snapshot = studioView.bitmapImageRepForCachingDisplay(in: studioView.bounds) {
+            studioView.cacheDisplay(in: studioView.bounds, to: snapshot)
+            try snapshot.representation(using: .png, properties: [:])?
+                .write(to: output.appendingPathComponent("character-studio.png"))
+        }
+        studio.close()
+        var requestFolder: URL?
+        library.generate(CustomCharacterLibrary.kinds) { id, kinds in
+            try self.require(kinds == CustomCharacterLibrary.kinds, "请求漏掉动作")
+            let folder = library.root.appendingPathComponent("Requests").appendingPathComponent(id.uuidString.lowercased())
+            try self.require(FileManager.default.fileExists(atPath: folder.appendingPathComponent("reference.png").path), "请求前未保存参考图")
+            requestFolder = folder
+            return 200
+        }
+        try await waitUntil({ requestFolder != nil })
+        guard let folder = requestFolder else { throw Failure(description: "未创建请求目录") }
+
+        let external = ProcessInfo.processInfo.environment["GUGU_CHARACTER_QA_SOURCE"]
+        let water = external.map { URL(fileURLWithPath: $0) } ?? CustomCharacterLibrary.movie(in: app.assets, kind: .water)
+        let waterResult = folder.appendingPathComponent("water.mp4")
+        try FileManager.default.copyItem(at: water, to: waterResult)
+        try Data(#"{"status":"ready","bytes":1}"#.utf8).write(to: folder.appendingPathComponent("water.json"), options: .atomic)
+        try await delay(1.25)
+        try require(library.pending && library.draftAssets(for: .water) == nil, "未校验成片是否完整")
+        func finishCopy(_ kind: ReminderKind, source: URL) throws {
+            let movie = folder.appendingPathComponent("\(kind.rawValue).mp4")
+            if movie != waterResult { try FileManager.default.copyItem(at: source, to: movie) }
+            guard let bytes = try movie.resourceValues(forKeys: [.fileSizeKey]).fileSize else {
+                throw Failure(description: "无法取得成片大小")
+            }
+            try Data("{\"status\":\"ready\",\"bytes\":\(bytes)}".utf8)
+                .write(to: folder.appendingPathComponent("\(kind.rawValue).json"), options: .atomic)
+        }
+        try finishCopy(.water, source: water)
+        try finishCopy(.walk, source: CustomCharacterLibrary.movie(in: app.assets, kind: .walk))
+        try Data(#"{"status":"failed"}"#.utf8).write(to: folder.appendingPathComponent("eyes.json"), options: .atomic)
+        try await waitUntil({ !library.busy }, timeout: 90)
+        try require(library.draftAssets(for: .water) != nil && library.draftAssets(for: .walk) != nil &&
+                    library.error(for: .eyes) != nil, "自动接收或单动作失败状态异常：\(library.message)")
+        try require(!library.readyToActivate && library.playbackAssets(for: .water) == nil, "套装不完整却允许替换")
+        passed("设置入口、自定义参考图、本地成片完整性校验、单动作失败及当前形象保留")
+
+        library.importClip(CustomCharacterLibrary.movie(in: app.assets, kind: .eyes), for: .eyes)
+        try await waitUntil({ !library.busy }, timeout: 60)
+        try require(library.readyToActivate, "导入失败：\(library.message)")
+        library.activateDraft()
+        let reloaded = CustomCharacterLibrary(root: library.root)
+        guard let custom = reloaded.playbackAssets(for: .water) else { throw Failure(description: "自定义形象未持久化") }
+        let expected = CustomCharacterLibrary.movie(in: custom, kind: .water)
+        app.startReminder(.water)
+        try await waitUntil({ app.animation.view.playerLayer.isReadyForDisplay }, timeout: 6)
+        let playing = (app.animation.player?.currentItem?.asset as? AVURLAsset)?.url
+        try require(playing == expected && !app.animation.usingStill, "提醒没有播放自定义视频")
+        try await waitUntil({ (app.animation.player?.currentTime().seconds ?? 0) >= 7.9 }, timeout: 10)
+        app.dismiss()
+        library.useInstalled(false)
+        app.startReminder(.water)
+        let fallback = (app.animation.player?.currentItem?.asset as? AVURLAsset)?.url
+        try require(fallback == CustomCharacterLibrary.movie(in: app.assets, kind: .water), "切回内置角色失败")
+        app.dismiss()
+        passed("单段导入、整套启用、重启保留、透明动画完整播放及切回内置形象")
     }
 }
